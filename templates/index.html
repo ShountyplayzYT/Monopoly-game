@@ -61,6 +61,28 @@
     </button>
   </div>
 </div>
+<div id="roomScreen">
+  <h1>MONO<span>POLY</span></h1>
+  <div>Play online with friends using a room code.</div>
+
+  <div class="startRow">
+    <button class="primary" style="font-size:16px;padding:10px 24px;" onclick="createRoom()">
+      Create Room
+    </button>
+  </div>
+
+  <div class="startRow">
+    <input type="text" id="joinCodeInput" placeholder="ROOM CODE" maxlength="5" style="text-transform:uppercase;width:120px;">
+    <button style="font-size:14px;" onclick="joinRoom()">Join Room</button>
+  </div>
+
+  <div id="roomCodeDisplay" style="display:none; text-align:center; margin-top:10px;">
+    <div style="font-size:13px;">Share this code with friends:</div>
+    <div style="font-size:32px; font-weight:900; letter-spacing:6px; color:#F2B705;" id="roomCodeText"></div>
+    <div id="waitingInfo" style="font-size:12px; margin-top:8px;"></div>
+    <button class="primary" style="margin-top:10px;" onclick="showStartScreenFromLobby()">Continue to Setup →</button>
+  </div>
+</div>
 
 <div id="boardWrap">
   <div id="board"></div>

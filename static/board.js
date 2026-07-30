@@ -1,5 +1,7 @@
 let ST = null; // last state from server
 let modalOpenFor = null; // dedupe key to avoid re-opening same modal repeatedly
+let MY_SEAT = null;
+let pollTimer = null;
 
 const GROUP_COLORS_FALLBACK = {
   brown:'#955436', lightblue:'#AAE0FA', pink:'#D93A96', orange:'#F7941D',
@@ -19,6 +21,7 @@ async function postJSON(url, body){
 
 function applyState(state){
   ST = state;
+  MY_SEAT = state.my_seat;
   renderBoard();
   renderAll();
   checkAutoModals();
@@ -37,10 +40,11 @@ async function startGame(){
     document.getElementById('ai2').checked,
     document.getElementById('ai3').checked
   ];
-  const startMoney = parseInt(document.getElementById('setStartMoney').value) || 1500;
+ const startMoney = parseInt(document.getElementById('setStartMoney').value) || 1500;
   const data = await postJSON('/api/start', {names, ai_flags: ai, start_money: startMoney});
   document.getElementById('startScreen').style.display = 'none';
   applyState(data);
+  startPolling();
 }
 
 async function rollDice(){ const d = await postJSON('/api/roll', {}); applyState(d); }
@@ -272,7 +276,7 @@ function renderPropsPanel(){
         '<div class="pname">'+s.name+(s.mortgaged?' \u{1F512}':'')+'</div>'+
         '<div class="marks">'+marks+'</div>';
       let extra = '<button class="small" onclick="showPropertyInfo('+s.id+')">i</button>';
-      if(!p.bankrupt && !p.is_ai){
+      if(!p.bankrupt && !p.is_ai && p.id === MY_SEAT){
         if(s.type==='property'){
           const fullGroup = ownsFullGroup(p, s.group);
           const canBuild = fullGroup && !s.mortgaged && s.houses<5 && evenBuildOk(s,'build');
@@ -308,6 +312,13 @@ function renderActionBtns(){
   const p = ST.players[ST.current_index];
   if(!p || p.bankrupt) return;
   if(p.is_ai){ box.innerHTML = '<i>AI is playing…</i>'; return; }
+
+  // NEW: if it's not my seat's turn, show a waiting message instead of live buttons
+  if(MY_SEAT !== null && p.id !== MY_SEAT){
+    box.innerHTML = '<i>Waiting for '+p.name+'…</i>';
+    return;
+  }
+
   if(['awaiting_buy','awaiting_auction','awaiting_trade'].includes(ST.turn_phase) || ST.trade){
     box.innerHTML = '<i>Resolve the popup to continue…</i>'; return;
   }
@@ -355,26 +366,23 @@ function checkAutoModals(){
   const p = ST.players[ST.current_index];
   if(!p) return;
 
-  if(ST.trade){
+  if(ST.trade && ST.trade.to_id === MY_SEAT){
     const key = 'trade';
     if(modalOpenFor!==key){ modalOpenFor=key; openTradeResponseModal(ST.trade); }
     return;
   }
-  if(ST.turn_phase==='awaiting_buy' && ST.pending && !p.is_ai){
+  if(ST.turn_phase==='awaiting_buy' && ST.pending && !p.is_ai && p.id === MY_SEAT){
     const key = 'buy'+ST.pending.space_id;
     if(modalOpenFor!==key){ modalOpenFor=key; openBuyModal(p, ST.pending); }
     return;
   }
   if(ST.turn_phase==='awaiting_auction' && ST.auction){
     const bidder = ST.players[ST.auction.bidders[ST.auction.turn_index]];
-    if(!bidder.is_ai){
+    if(!bidder.is_ai && bidder.id === MY_SEAT){
       const key = 'auction'+ST.auction.space_id+'_'+ST.auction.current_bid;
       if(modalOpenFor!==key){ modalOpenFor=key; openAuctionModal(bidder); }
       return;
     }
-  }
-  if(document.getElementById('overlay').style.display==='flex' && modalOpenFor && !['trade','buy'].some(k=>modalOpenFor.startsWith(k))){
-    // leave manually-opened modals (trade compose, property info) alone
   }
 }
 
@@ -566,4 +574,63 @@ function showStats(){
       '<br><b>Most-landed-on spaces:</b><br>'+mostLanded,
     buttons:[{label:'Close', action:closeModal}]
   });
+}
+async function createRoom(){
+  const data = await postJSON('/api/create_room', {});
+  MY_SEAT = data.seat;
+  document.getElementById('roomCodeText').textContent = data.room_code;
+  document.getElementById('roomCodeDisplay').style.display = 'block';
+  startPolling(); // so the lobby view updates as others join
+}
+
+async function joinRoom(){
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+  if(!code){ alert('Enter a room code.'); return; }
+  const data = await postJSON('/api/join_room', {room_code: code});
+  MY_SEAT = data.seat;
+  document.getElementById('roomCodeText').textContent = data.room_code;
+  document.getElementById('roomCodeDisplay').style.display = 'block';
+  document.getElementById('joinCodeInput').disabled = true;
+  startPolling();
+}
+
+async function refreshRoomInfo(){
+  try{
+    const res = await fetch('/api/room_info');
+    const info = await res.json();
+    if(info.error) return;
+    if(info.started){
+      // game already underway — jump straight into it
+      document.getElementById('roomScreen').style.display = 'none';
+      document.getElementById('startScreen').style.display = 'none';
+      const state = await (await fetch('/api/state')).json();
+      applyState(state);
+      return;
+    }
+    document.getElementById('waitingInfo').textContent =
+      info.seat_count + ' player(s) in room. Waiting for host to start…';
+  }catch(e){ /* ignore transient errors while polling */ }
+}
+
+function showStartScreenFromLobby(){
+  document.getElementById('roomScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+}
+
+
+function startPolling(){
+  if(pollTimer) return; // already running
+  pollTimer = setInterval(async ()=>{
+    try{
+      // while still in the lobby (no game started yet), poll room_info instead of state
+      if(!ST || !ST.started){
+        await refreshRoomInfo();
+        return;
+      }
+      const res = await fetch('/api/state');
+      const data = await res.json();
+      if(data.error) return;
+      applyState(data);
+    }catch(e){ /* network hiccup — just try again next tick */ }
+  }, 2000);
 }
