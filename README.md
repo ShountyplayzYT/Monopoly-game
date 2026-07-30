@@ -1,7 +1,7 @@
 # Monopoly
 ![Screenshot of Monopoly Game](mon_img.png)
 ## The Game:
-For our final project, we coded a game of Monopoly that could be played with up to four players locally, or against bots. The bots were programmed by informing them about popular Monopoly strategies and teaching them how to play essentially perfectly. Sometimes the bots even taught themselves new strategies. These include using all homes instead of upgrading to hotels so that players can’t build houses, and sometimes playing extremely defensive and annoying games that prevent players from building monopolies by always refusing to sell a blocking property.
+For our final project, we coded a game of Monopoly that could be played with four players locally, or against bots. The bots were programmed by informing them about popular Monopoly strategies and teaching them how to play essentially perfectly. Sometimes the bots even taught themselves new strategies. These include using all homes instead of upgrading to hotels so that players can’t build houses, and sometimes playing extremely defensive and annoying games that prevent players from building monopolies by always refusing to sell a blocking property.
 
 **In addition to the bots, we coded multiple features of Monopoly such as:**
 
