@@ -813,26 +813,48 @@ class Game:
     def _ai_evaluate_trade(self, me, other, i_give_props, i_give_cash, i_give_goojf, i_get_props, i_get_cash, i_get_goojf):
         if me["money"] < i_give_cash:
             return "reject"
+
         completes_opp_monopoly = False
-        for sid in i_give_props:
-            s = self.spaces[sid]
-            if s["type"] != "property":
-                continue
-            spaces_in_group = [x for x in self.spaces if x.get("group") == s["group"]]
-            owned_after = sum(1 for x in spaces_in_group if x["owner"] == other["id"] or x["id"] in i_give_props)
-            if owned_after >= len(spaces_in_group):
-                completes_opp_monopoly = True
         breaks_own_monopoly = any(
             self.spaces[sid]["type"] == "property" and self.owns_full_group(me, self.spaces[sid]["group"])
             for sid in i_give_props
         )
-        give_val = i_give_cash + sum(self.property_value(self.spaces[sid]) * self.group_weight(self.spaces[sid]) for sid in i_give_props) + (60 if i_give_goojf else 0)
-        get_val = i_get_cash + sum(self.property_value(self.spaces[sid]) * self.group_weight(self.spaces[sid]) for sid in i_get_props) + (60 if i_get_goojf else 0)
+
+        min_required = i_give_cash + (60 if i_give_goojf else 0)
+        for sid in i_give_props:
+            s = self.spaces[sid]
+            value_to_other = self.real_property_value(s, other["id"])
+            value_to_me = self.real_property_value(s, me["id"])
+            base_price = s.get("price", self.property_value(s))
+
+            if s["type"] == "property":
+                spaces_in_group = [x for x in self.spaces if x.get("group") == s["group"]]
+                total = len(spaces_in_group)
+                owned_after = sum(1 for x in spaces_in_group if x["owner"] == other["id"] or x["id"] in i_give_props)
+                if owned_after >= total:
+                    completes_opp_monopoly = True
+
+            # if it's genuinely useful to ME too (I hold others in the set),
+            # demand a steep premium instead of the normal floor
+            if value_to_me > base_price * 1.9:
+                min_required += value_to_me * 1.5
+            else:
+                min_required += value_to_other
+
+        get_val = i_get_cash + sum(
+            self.property_value(self.spaces[sid]) * self.group_weight(self.spaces[sid]) for sid in i_get_props
+        ) + (60 if i_get_goojf else 0)
+
         if me["money"] - i_give_cash < -100:
             return "reject"
+
+        if get_val < min_required:
+            return "reject"
+
         if completes_opp_monopoly or breaks_own_monopoly:
-            return "accept" if get_val >= give_val * 1.3 else "reject"
-        return "accept" if get_val >= give_val * 0.95 else "reject"
+            return "accept" if get_val >= min_required * 1.1 else "reject"
+
+        return "accept"
 
     # calculate top maximum bid computer player will offer in auction
     def ai_auction_max_bid(self, p, space):
@@ -915,8 +937,10 @@ class Game:
         owner = self.players[best["owner"]]
         if owner["bankrupt"]:
             return
-        basic_price = best.get("price", self.property_value(best))
-        offer_cash = min(max(0, int(basic_price * 1.1)), max(0, p["money"] - self.ai_cash_buffer(p)))
+
+        # pay what it's really worth to ME as the buyer (150-250% scale)
+        value_to_me = self.real_property_value(best, p["id"])
+        offer_cash = min(max(0, int(value_to_me)), max(0, p["money"] - self.ai_cash_buffer(p)))
         if offer_cash <= 0:
             return
         self.propose_trade(p["id"], owner["id"], [], offer_cash, False, [best["id"]], 0, False,
@@ -1003,3 +1027,29 @@ class Game:
             "stats": self.stats,
             "group_colors": GROUP_COLORS,
         }
+    # true worth of a property to a SPECIFIC player, factoring in group synergy
+    def real_property_value(self, prop, viewer_id):
+        base_price = prop.get("price", self.property_value(prop))
+
+        if prop["type"] == "railroad":
+            owned = sum(1 for s in self.spaces if s["type"] == "railroad" and s["owner"] == viewer_id)
+            return base_price * (1.5 + 0.5 * owned)
+
+        if prop["type"] == "utility":
+            owned = sum(1 for s in self.spaces if s["type"] == "utility" and s["owner"] == viewer_id)
+            return base_price * (1.3 + 0.5 * owned)
+
+        if prop["type"] != "property":
+            return base_price
+
+        spaces_in_group = [x for x in self.spaces if x.get("group") == prop["group"]]
+        total = len(spaces_in_group)
+        owned_by_viewer = sum(1 for x in spaces_in_group if x["owner"] == viewer_id)
+        owned_after = owned_by_viewer + (0 if prop["owner"] == viewer_id else 1)
+
+        if owned_after >= total:
+            return base_price * 2.5   # completes the set
+        elif owned_by_viewer >= 1:
+            return base_price * 2.0   # meaningful progress
+        else:
+            return base_price * 1.5   # no synergy — still floor at 150%
