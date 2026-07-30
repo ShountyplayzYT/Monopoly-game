@@ -1,8 +1,10 @@
+# color codes for each property set on the board
 GROUP_COLORS = {
     "brown": "#955436", "lightblue": "#AAE0FA", "pink": "#D93A96", "orange": "#F7941D",
     "red": "#ED1B24", "yellow": "#FEF200", "green": "#1FB25A", "blue": "#0072BB"
 }
 
+# master list of all forty board spaces in order
 RAW_SPACES = [
     {"name": "GO", "type": "go"},
     {"name": "Mediterranean Avenue", "type": "property", "group": "brown", "price": 60, "rent": [2,10,30,90,160,250], "houseCost": 50},
@@ -47,21 +49,31 @@ RAW_SPACES = [
 ]
 
 
+# make a fresh list of spaces with initial game settings
 def fresh_spaces():
     spaces = []
+    # loop through each board space
     for i, s in enumerate(RAW_SPACES):
+        # copy space dictionary
         sp = dict(s)
+        # give unique id number
         sp["id"] = i
+        # set no owner at start
         sp["owner"] = None
+        # set zero houses built
         sp["houses"] = 0
+        # set not mortgaged
         sp["mortgaged"] = False
+        # calculate mortgage value as half the buy price
         if sp.get("price"):
             sp["mortgageValue"] = sp["price"] // 2
+        # add prepared space to list
         spaces.append(sp)
+    # return completed space list
     return spaces
 
 
-# Card effects are descriptors: {"action": <name>, ...params}
+# list of all chance cards and card actions
 CHANCE_CARDS = [
     {"text": "Advance to Go. Collect $200.", "action": "advance_to", "dest": 0, "pass_go": True},
     {"text": "Advance to Illinois Avenue. If you pass Go, collect $200.", "action": "advance_to", "dest": 24, "pass_go": True},
@@ -81,6 +93,7 @@ CHANCE_CARDS = [
     {"text": "Your building loan matures. Collect $150.", "action": "pay_from_bank", "amount": 150},
 ]
 
+# list of all community chest cards and card actions
 COMMUNITY_CARDS = [
     {"text": "Advance to Go. Collect $200.", "action": "advance_to", "dest": 0, "pass_go": True},
     {"text": "Bank error in your favor. Collect $200.", "action": "pay_from_bank", "amount": 200},
@@ -100,9 +113,12 @@ COMMUNITY_CARDS = [
     {"text": "You inherit $100.", "action": "pay_from_bank", "amount": 100},
 ]
 
+# value weights for color sets used by computer players
 GROUP_WEIGHT = {
     "orange": 1.35, "red": 1.3, "blue": 1.2, "lightblue": 1.05, "pink": 0.95,
     "yellow": 0.85, "green": 0.8, "brown": 0.55
 }
+# value weight for train station properties
 RAILROAD_WEIGHT = 0.9
+# value weight for utility properties
 UTILITY_WEIGHT = 0.4
