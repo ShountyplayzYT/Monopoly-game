@@ -1,0 +1,122 @@
+:root{
+  --cream:#EDE4D3; --cream-light:#F7F2E7; --ink:#1B1B1B;
+  --brown:#955436; --lightblue:#AAE0FA; --pink:#D93A96; --orange:#F7941D;
+  --red:#ED1B24; --yellow:#FEF200; --green:#1FB25A; --blue:#0072BB;
+  --gold:#C9A646;
+  --p0:#E0393A; --p1:#3E7CD6; --p2:#F2B705; --p3:#2FA95C;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; font-family:'Georgia','Times New Roman',serif; background:#0B4B33;
+  color:var(--ink); display:flex; align-items:flex-start; justify-content:center;
+  padding:18px; gap:18px; flex-wrap:wrap;
+}
+#boardWrap{background:var(--cream); padding:10px; border:6px solid var(--ink); border-radius:6px; box-shadow:0 10px 40px rgba(0,0,0,.5);}
+#board{display:grid; grid-template-columns:repeat(11,62px); grid-template-rows:repeat(11,62px); gap:1px; background:var(--ink);}
+.space{
+  background:var(--cream-light); position:relative; font-size:8px; line-height:1.05;
+  display:flex; flex-direction:column; align-items:center; text-align:center; padding:2px 1px;
+  cursor:pointer; overflow:visible;
+}
+.space .colorbar{width:100%; height:15px; flex:0 0 auto; border-bottom:1px solid #000; margin-bottom:2px;}
+.space .nm{font-weight:100; ; letter-spacing:.2px; width:100%; overflow-wrap:break-word; word-break:break-word; margin-top:auto;}
+.space .pr{font-size:7.5px; color:#444; margin-top:1px;}
+.space .ownerBar{height:4px; width:100%; margin-top:2px; border-radius:2px;}
+.corner{display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; text-align:center; padding:2px; background:var(--cream-light); cursor:default;}
+.tokens{position:absolute; bottom:2px; left:2px; display:flex; flex-wrap:wrap; gap:1px; max-width:56px; z-index:6;}
+.corner .tokens{position:static; margin-top:4px;}
+.token{width:12px; height:12px; border-radius:50%; border:2px solid #000; box-shadow:0 0 3px rgba(0,0,0,.6); transition: all .35s ease; z-index:10;}
+.houses{position:absolute; top:1px; left:1px; display:flex; gap:1px; z-index:4;}
+.house{width:6px; height:6px; background:#2FA95C; border:1px solid #063;}
+.hotel{width:10px; height:7px; background:#B4232A; border:1px solid #500;}
+.mortgaged{outline:2px dashed #900; outline-offset:-3px;}
+.monopolyGlow{box-shadow: inset 0 0 0 3px gold;}
+#center{
+  grid-column:2/11; grid-row:2/11; background:#F7F2E7; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; padding:10px; border:2px solid var(--ink); position:relative; gap:6px;
+}
+#deckRow{display:flex; gap:14px; align-items:center; justify-content:center; margin-bottom:2px;}
+.deckCard{
+  width:74px; height:48px; background:var(--cream-light); border:2px solid var(--ink); border-radius:6px;
+  display:flex; align-items:center; justify-content:center; font-weight:900; font-size:11px; text-align:center;
+  box-shadow:2px 2px 0 var(--ink);
+}
+.deckCard.chance{color:var(--orange);}
+.deckCard.chest{color:var(--blue);}
+#logoTitle{font-size:28px; font-weight:900; letter-spacing:2px; color:var(--ink); font-family:'Georgia',serif;}
+#logoTitle span{color:var(--red);}
+#diceArea{display:flex; gap:10px; margin:4px 0; align-items:center;}
+.die{width:40px; height:40px; background:#fff; border:2px solid #000; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:900; transition: transform .08s;}
+.die.rolling{animation: dieRoll .08s infinite;}
+@keyframes dieRoll{ 0%{transform:rotate(0deg);} 50%{transform:rotate(15deg);} 100%{transform:rotate(-15deg);} }
+#turnBanner{font-size:14px; font-weight:700; margin-bottom:2px; text-align:center;}
+#actionBtns{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:4px; max-width:340px;}
+button{font-family:inherit; font-size:12.5px; padding:8px 12px; border-radius:5px; border:2px solid var(--ink); background:var(--cream-light); cursor:pointer; font-weight:700;}
+button.primary:hover:not(:disabled){background:#c42a2a;}
+button:disabled{opacity:.4; cursor:not-allowed;}
+button.primary{background:var(--red); color:#fff;}
+button.gold{background:var(--gold); color:#000;}
+button.small{padding:2px 6px; font-size:10px;}
+#miniLog{font-size:11px; max-width:300px; text-align:center; color:#333; min-height:28px;}
+#sidePanel{width:360px; display:flex; flex-direction:column; gap:10px;}
+.panelBox{background:var(--cream-light); border:3px solid var(--ink); border-radius:6px; padding:10px;}
+.panelBox h3{margin:0 0 8px 0; font-size:14px; border-bottom:2px solid var(--ink); padding-bottom:4px; display:flex; justify-content:space-between; align-items:center;}
+.playerRow{display:flex; align-items:center; gap:6px; padding:5px; border-radius:4px; margin-bottom:4px; font-size:12.5px;}
+.playerRow .dot{width:14px; height:14px; border-radius:50%; border:2px solid #000; flex-shrink:0;}
+.playerRow.active{background:#FFF3C4; box-shadow:0 0 0 2px var(--gold) inset;}
+.playerRow.bankrupt{opacity:.4; text-decoration:line-through;}
+#log{height:130px; overflow-y:auto; font-size:11.5px; background:#fff; border:1px solid #999; padding:6px; border-radius:4px;}
+#log div{margin-bottom:3px; padding-bottom:3px; border-bottom:1px dotted #ccc;}
+#propsList{max-height:280px; overflow-y:auto; font-size:11.5px;}
+.propRow{display:flex; align-items:center; gap:5px; padding:4px 3px; border-bottom:1px solid #ddd;}
+.propRow.monopolyRow{background:#fff8d6;}
+.propRow .swatch{width:10px; height:10px; border:1px solid #000; flex-shrink:0;}
+.propRow .pname{flex:1;}
+.propRow button{padding:2px 6px; font-size:10px;}
+.propRow .marks{font-size:11px; white-space:nowrap;}
+.mark.house{color:#1FB25A; letter-spacing:1px;}
+.mark.hotel{color:#B4232A; font-size:14px;}
+.mark.zero{color:#999; font-size:10px; border:1px solid #bbb; border-radius:50%; padding:0px 4px;}
+.pgHeader{display:flex; align-items:center; gap:5px; font-weight:700; font-size:12px; margin:6px 0 3px 0;}
+.pgHeader .dot{width:10px; height:10px; border-radius:50%; border:2px solid #000; flex-shrink:0;}
+#bankInfo{font-size:11px; color:#333;}
+#overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50;}
+#modal{background:var(--cream-light); border:4px solid var(--ink); border-radius:8px; padding:20px; max-width:380px; max-height:85vh; overflow-y:auto; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.6);}
+#modal h2{margin-top:0; font-size:16px;}
+#modal p{font-size:13px; line-height:1.4; text-align:left;}
+#modal .modalBtns{display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;}
+.cardModal{border-color:#7a1f1f;}
+.cardModal.community{border-color:#0b4b8f;}
+#startScreen{position:fixed; inset:0; background:#0B4B33; display:flex; align-items:center; justify-content:center; z-index:100; color:#fff; flex-direction:column; gap:12px; overflow-y:auto; padding:20px;}
+#startScreen h1{font-size:40px; letter-spacing:3px;}
+#startScreen h1 span{color:#F2B705;}
+#startScreen input[type=text],#startScreen input[type=number]{padding:6px 8px; font-size:13px; border-radius:4px; border:2px solid #000; width:160px;}
+.startRow{display:flex; align-items:center; gap:8px;}
+.settingsGrid{display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; background:rgba(255,255,255,.08); padding:14px; border-radius:8px; font-size:13px;}
+.settingsGrid label{display:flex; align-items:center; gap:6px; justify-content:space-between;}
+.trade-select{width:100%; padding:6px; margin-bottom:10px; background:#222; color:#fff; border:1px solid #444;}
+.trade-row{display:flex; gap:10px; align-items:center; margin-bottom:8px;}
+.trade-row label{flex:1; font-size:12px; color:#333;}
+.trade-row input{flex:1; padding:4px; background:#fff; color:#000; border:1px solid #444;}
+.trade-props-box{max-height:110px; overflow-y:auto; background:#fff; color:#000; border:1px solid #444; padding:6px; margin-bottom:8px; font-size:12px; text-align:left;}
+.trade-props-box label{display:block; margin-bottom:5px; cursor:pointer;}
+.trade-props-box input[type="checkbox"]{margin-right:6px;}
+.infoTable{width:100%; border-collapse:collapse; font-size:11px; margin-top:6px;}
+.infoTable td{border:1px solid #999; padding:3px 6px;}
+#aiBadge{font-size:9px; background:#222; color:#fff; border-radius:3px; padding:1px 4px; margin-left:4px;}
+.space-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin: auto;
+  display: block;
+  z-index: 2;
+}
+
+/* Ensure corner text/icons are centered well */
+.corner-icon {
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+  margin-top: 4px;
+}

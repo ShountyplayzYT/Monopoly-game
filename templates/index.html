@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Monopoly — 4 Player</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>MONO<span>POLY</span></h1>
+  <div>Enter names, tweak settings, then start.</div>
+
+  <div class="startRow">
+    <div class="token" style="background:var(--p0);width:16px;height:16px;"></div>
+    <input type="text" id="n0" value="Player 1">
+    <label style="font-size:11px;"><input type="checkbox" id="ai0"> AI</label>
+  </div>
+
+  <div class="startRow">
+    <div class="token" style="background:var(--p1);width:16px;height:16px;"></div>
+    <input type="text" id="n1" value="Player 2">
+    <label style="font-size:11px;"><input type="checkbox" id="ai1"> AI</label>
+  </div>
+
+  <div class="startRow">
+    <div class="token" style="background:var(--p2);width:16px;height:16px;"></div>
+    <input type="text" id="n2" value="Player 3">
+    <label style="font-size:11px;"><input type="checkbox" id="ai2"> AI</label>
+  </div>
+
+  <div class="startRow">
+    <div class="token" style="background:var(--p3);width:16px;height:16px;"></div>
+    <input type="text" id="n3" value="Player 4">
+    <label style="font-size:11px;"><input type="checkbox" id="ai3"> AI</label>
+  </div>
+
+  <div class="settingsGrid">
+    <label>
+      Starting money
+      <input type="number" id="setStartMoney" value="1500" style="width:80px;">
+    </label>
+    <label>
+      Free Parking jackpot
+      <input type="checkbox" id="setFreeParking">
+    </label>
+    <label>
+      Game mode
+      <select id="setGameMode" style="width:110px;padding:4px;">
+        <option value="normal" selected>Normal</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="startRow">
+    <button class="primary" style="font-size:16px;padding:10px 24px;" onclick="startGame()">
+      Start Game
+    </button>
+    <button style="font-size:14px;" onclick="loadGame()">
+      Load Saved Game
+    </button>
+  </div>
+</div>
+
+<div id="boardWrap">
+  <div id="board"></div>
+</div>
+
+<div id="sidePanel">
+  <div class="panelBox">
+    <h3>
+      <span>Players</span>
+      <span id="bankInfo"></span>
+    </h3>
+    <div id="playersBox"></div>
+  </div>
+
+  <div class="panelBox">
+    <h3>Properties (All Players)</h3>
+    <div id="propsList"></div>
+  </div>
+
+  <div class="panelBox">
+    <h3>
+      <span>Game Log</span>
+      <span>
+        <button class="small" onclick="saveGame()">Save</button>
+        <button class="small" onclick="loadGame()">Load</button>
+        <button class="small" onclick="showStats()">Stats</button>
+      </span>
+    </h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="modal"></div>
+</div>
+
+<script src="{{ url_for('static', filename='board.js') }}"></script>
+</body>
+</html>
