@@ -414,7 +414,7 @@ function openAuctionModal(activePlayer){
     buttons: [
       {label:"Place Bid", action: async ()=>{
         const amt = parseInt(document.getElementById('auctionBidInput').value);
-        closeModal(); await auctionBid(amt);
+        closeModal(); await auctionBid(amt); 
       }},
       {label:"Fold (Drop out)", action: async ()=>{ closeModal(); await auctionFold(); }}
     ]
@@ -633,4 +633,10 @@ function startPolling(){
       applyState(data);
     }catch(e){ /* network hiccup — just try again next tick */ }
   }, 2000);
+}
+async function playLocally(){
+  await postJSON('/api/start_local', {});
+  document.getElementById('roomScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+  // no polling needed for local play — everything happens instantly in one browser
 }

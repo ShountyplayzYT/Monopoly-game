@@ -78,6 +78,12 @@ def get_my_seat(room):
     token = session.get("seat_token")
     if token is None:
         return None
+    if room.get("local"):
+        # in hotseat mode, "my seat" is always whichever seat is currently acting
+        g = room["game"]
+        if g.turn_phase == "awaiting_auction" and g.auction:
+            return g.auction["bidders"][g.auction["turn_index"]]
+        return g.current_index
     for pid, tok in room["seats"].items():
         if tok == token:
             return pid
@@ -95,6 +101,8 @@ def require_my_turn_seat(room):
     my_seat = get_my_seat(room)
     if my_seat is None:
         raise GameError("You don't have a seat in this game.")
+    if room.get("local"):
+        return my_seat  # hotseat mode — same browser plays every seat, no turn-gating needed
     if g.turn_phase == "awaiting_auction" and g.auction:
         acting_id = g.auction["bidders"][g.auction["turn_index"]]
     else:
@@ -299,8 +307,9 @@ def propose_trade():
     g = room["game"]
     my_seat = get_my_seat(room)
     d = request.json or {}
-    if int(d["from_id"]) != my_seat:
+    if not room.get("local") and int(d["from_id"]) != my_seat:
         return jsonify({"error": "You can only propose trades from your own seat."}), 403
+    
     try:
         result = g.propose_trade(
             int(d["from_id"]), int(d["to_id"]),
@@ -321,7 +330,7 @@ def respond_trade():
         return jsonify({"error": "Not in a room."}), 400
     g = room["game"]
     my_seat = get_my_seat(room)
-    if not g.trade or g.trade["to_id"] != my_seat:
+    if not g.trade or (not room.get("local") and g.trade["to_id"] != my_seat):
         return jsonify({"error": "No trade offer is waiting on your seat."}), 400
     d = request.json or {}
     try:
@@ -382,5 +391,42 @@ def unmortgage():
         return jsonify({"error": str(e)}), 400
     return ok(room)
 
+@app.route("/api/start_local", methods=["POST"])
+def start_local():
+    """Create a single-session room where this browser controls ALL seats (hotseat mode)."""
+    code = make_room_code()
+    seat_token = str(uuid.uuid4())
+    g = Game()
+    # bind all 4 possible seats to the SAME token, so this one browser can act as anyone
+    ROOMS[code] = {
+        "game": g,
+        "seats": {0: seat_token, 1: seat_token, 2: seat_token, 3: seat_token},
+        "created": time.time(),
+        "last_seen": time.time(),
+        "local": True,
+    }
+    session["room_code"] = code
+    session["seat_token"] = seat_token
+    return jsonify({"room_code": code, "local": True})
+
+@app.route("/api/save", methods=["POST"])
+def save():
+    room = get_room()
+    if not room:
+        return jsonify({"error": "Not in a room."}), 400
+    code = session.get("room_code")
+    SAVES[code] = copy.deepcopy(room["game"].__dict__)
+    save_state_to_disk()
+    return jsonify({"ok": True})
+
+@app.route("/api/load", methods=["POST"])
+def load():
+    room = get_room()
+    code = session.get("room_code")
+    if not room or code not in SAVES:
+        return jsonify({"error": "No saved game found for this room."}), 400
+    room["game"].__dict__.update(copy.deepcopy(SAVES[code]))
+    maybe_advance_ai(room["game"])
+    return ok(room)
 if __name__ == "__main__":
     app.run(debug=False)
