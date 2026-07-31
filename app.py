@@ -1,12 +1,65 @@
 from flask import Flask, session, jsonify, request, render_template
 import uuid, copy, random, string, time
 from game_logic import Game, GameError
-
+import json, os, atexit
 app = Flask(__name__)
 app.secret_key = "dev-secret-change-me"
 
 ROOMS = {}   # room_code -> {"game": Game, "seats": {player_id: seat_token}, "created": ts, "last_seen": ts}
 SAVES = {}
+
+STATE_FILE = "game_state.json"
+
+def _game_to_dict(g):
+    return g.__dict__
+
+def _dict_to_game(d):
+    g = Game()
+    g.__dict__.update(d)
+    return g
+
+def save_state_to_disk():
+    try:
+        serializable = {
+            "rooms": {
+                code: {
+                    "game": _game_to_dict(room["game"]),
+                    "seats": room["seats"],
+                    "created": room["created"],
+                    "seat_last_seen": room.get("seat_last_seen", {}),
+                }
+                for code, room in ROOMS.items()
+            },
+            "saves": SAVES,
+        }
+        with open(STATE_FILE, "w") as f:
+            json.dump(serializable, f)
+    except Exception as e:
+        print(f"Warning: failed to save state: {e}")
+
+def load_state_from_disk():
+    global ROOMS, SAVES
+    if not os.path.exists(STATE_FILE):
+        return
+    try:
+        with open(STATE_FILE) as f:
+            data = json.load(f)
+        for code, room in data.get("rooms", {}).items():
+            g = _dict_to_game(room["game"])
+            ROOMS[code] = {
+                "game": g,
+                "seats": {int(k): v for k, v in room["seats"].items()},
+                "created": room["created"],
+                "seat_last_seen": {int(k): v for k, v in room.get("seat_last_seen", {}).items()},
+            }
+        SAVES.update(data.get("saves", {}))
+        print(f"Restored {len(ROOMS)} room(s) from disk.")
+    except Exception as e:
+        print(f"Warning: failed to load state: {e}")
+
+load_state_from_disk()
+atexit.register(save_state_to_disk)
+
 
 def make_room_code():
     while True:
@@ -69,6 +122,7 @@ def maybe_advance_ai(g):
         g.ai_play_full_turn()
 
 def ok(room):
+    save_state_to_disk()
     data = room["game"].serialize()
     data["room_code"] = session.get("room_code")
     data["my_seat"] = get_my_seat(room)
@@ -257,6 +311,7 @@ def propose_trade():
     except GameError as e:
         return jsonify({"error": str(e)}), 400
     maybe_advance_ai(g)
+    save_state_to_disk()
     return jsonify({"result": result.get("result"), "state": g.serialize(), "my_seat": my_seat})
 
 @app.route("/api/respond_trade", methods=["POST"])
@@ -276,5 +331,56 @@ def respond_trade():
     maybe_advance_ai(g)
     return ok(room)
 
+@app.route("/api/sell_house", methods=["POST"])
+def sell_house():
+    room = get_room()
+    if not room:
+        return jsonify({"error": "Not in a room."}), 400
+    g = room["game"]
+    data = request.json or {}
+    sid = int(data["space_id"])
+    my_seat = get_my_seat(room)
+    if g.spaces[sid]["owner"] != my_seat:
+        return jsonify({"error": "You don't own this property."}), 403
+    try:
+        g.sell_house(sid)
+    except GameError as e:
+        return jsonify({"error": str(e)}), 400
+    return ok(room)
+
+@app.route("/api/mortgage", methods=["POST"])
+def mortgage():
+    room = get_room()
+    if not room:
+        return jsonify({"error": "Not in a room."}), 400
+    g = room["game"]
+    data = request.json or {}
+    sid = int(data["space_id"])
+    my_seat = get_my_seat(room)
+    if g.spaces[sid]["owner"] != my_seat:
+        return jsonify({"error": "You don't own this property."}), 403
+    try:
+        g.mortgage(sid)
+    except GameError as e:
+        return jsonify({"error": str(e)}), 400
+    return ok(room)
+
+@app.route("/api/unmortgage", methods=["POST"])
+def unmortgage():
+    room = get_room()
+    if not room:
+        return jsonify({"error": "Not in a room."}), 400
+    g = room["game"]
+    data = request.json or {}
+    sid = int(data["space_id"])
+    my_seat = get_my_seat(room)
+    if g.spaces[sid]["owner"] != my_seat:
+        return jsonify({"error": "You don't own this property."}), 403
+    try:
+        g.unmortgage(sid)
+    except GameError as e:
+        return jsonify({"error": str(e)}), 400
+    return ok(room)
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
