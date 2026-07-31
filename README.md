@@ -11,6 +11,7 @@ For our final project, we coded a game of Monopoly that could be played with fou
 * working dice
 * home/hotel building
 * all functional spaces such as the jail, chance, chest, and GO spaces
+* and finally, monopoly online, where you create rooms and can play with your freinds. To do this, the room creater is player 1, and whoever joins seccond is player 2, and so on. Remaining seats can be filled with bots. 
 
 **Convenient Addons:**
 
